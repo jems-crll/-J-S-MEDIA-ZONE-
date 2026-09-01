@@ -18,4 +18,4 @@ export interface NavItem {
   href: string;
 }
 
-export type ViewState = 'home' | 'email-marketing' | 'it-services' | 'contact';
+export type ViewState = 'home' | 'email-marketing' | 'it-services' | 'contact' | 'privacy' | 'careers';

@@ -4,6 +4,7 @@ import * as Icons from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
 interface ServiceCardProps {
+  key?: string;
   service: Service;
   index: number;
   onClick: () => void;

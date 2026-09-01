@@ -7,6 +7,8 @@ import ServiceCard from './components/ServiceCard';
 import TeamCard from './components/TeamCard';
 import EmailMarketingView from './components/EmailMarketing';
 import ITServicesView from './components/ITServices';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import Careers from './components/Careers';
 import AdminDashboard from './components/AdminDashboard';
 import { ViewState } from './types';
 import { AuthProvider } from './contexts/AuthContext';
@@ -34,7 +36,7 @@ function AppContent() {
   };
 
   if (view === 'admin') {
-    return <AdminDashboard />;
+    return <AdminDashboard onBack={() => navigateTo('home')} />;
   }
 
   return (
@@ -161,9 +163,9 @@ function AppContent() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                   {services.map((service, index) => (
                     <ServiceCard 
-                      key={service.id} 
-                      service={service} 
-                      index={index} 
+                      key={service.id}
+                      service={service}
+                      index={index}
                       onClick={() => navigateTo(service.id === 'email-marketing' ? 'email-marketing' : 'it-services')}
                     />
                   ))}
@@ -318,7 +320,14 @@ function AppContent() {
         )}
 
         {view === 'email-marketing' && <EmailMarketingView key="email" />}
-        {view === 'it-services' && <ITServicesView key="it" onContactClick={() => navigateTo('contact')} />}
+        {view === 'privacy' && <PrivacyPolicy settings={settings} />}
+        {view === 'careers' && <Careers />}
+        {view === 'it-services' && (
+          <ITServicesView 
+            key="it-services-view"
+            onContactClick={() => navigateTo('contact')} 
+          />
+        )}
         
         {view === 'contact' && (
           <motion.main
@@ -372,9 +381,13 @@ function AppContent() {
                     <textarea id="enquiry-message" placeholder="Your Message" rows={4} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-pink-600 resize-none"></textarea>
                     <button 
                       onClick={async () => {
-                        const name = (document.getElementById('enquiry-name') as HTMLInputElement).value;
-                        const email = (document.getElementById('enquiry-email') as HTMLInputElement).value;
-                        const message = (document.getElementById('enquiry-message') as HTMLTextAreaElement).value;
+                        const nameEl = document.getElementById('enquiry-name') as HTMLInputElement;
+                        const emailEl = document.getElementById('enquiry-email') as HTMLInputElement;
+                        const messageEl = document.getElementById('enquiry-message') as HTMLTextAreaElement;
+                        
+                        const name = nameEl.value;
+                        const email = emailEl.value;
+                        const message = messageEl.value;
                         
                         if (!name || !email || !message) {
                           alert('Please fill all fields');
@@ -382,19 +395,20 @@ function AppContent() {
                         }
 
                         try {
-                          const { addDoc, collection } = await import('firebase/firestore');
-                          const { db } = await import('./lib/firebase');
-                          await addDoc(collection(db, 'enquiries'), {
-                            name,
-                            email,
-                            message,
-                            createdAt: new Date(),
-                            status: 'new'
+                          const response = await fetch('/api/enquiry', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name, email, message })
                           });
-                          alert('Thank you! Your enquiry has been sent.');
-                          (document.getElementById('enquiry-name') as HTMLInputElement).value = '';
-                          (document.getElementById('enquiry-email') as HTMLInputElement).value = '';
-                          (document.getElementById('enquiry-message') as HTMLTextAreaElement).value = '';
+                          
+                          if (response.ok) {
+                            alert('Thank you! Your enquiry has been sent. We will get back to you shortly.');
+                            nameEl.value = '';
+                            emailEl.value = '';
+                            messageEl.value = '';
+                          } else {
+                            throw new Error('Failed to send enquiry');
+                          }
                         } catch (error) {
                           alert('Error sending enquiry: ' + error);
                         }
@@ -454,7 +468,7 @@ function AppContent() {
                 <li><button onClick={() => navigateTo('home')} className="text-gray-400 hover:text-white text-sm transition-colors">Home</button></li>
                 <li><button onClick={() => { navigateTo('home'); setTimeout(() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="text-gray-400 hover:text-white text-sm transition-colors">About Us</button></li>
                 <li><button onClick={() => navigateTo('it-services')} className="text-gray-400 hover:text-white text-sm transition-colors">Services</button></li>
-                <li><button className="text-gray-400 hover:text-white text-sm transition-colors">Careers</button></li>
+                <li><button onClick={() => navigateTo('careers')} className="text-gray-400 hover:text-white text-sm transition-colors">Careers</button></li>
                 <li><button onClick={() => navigateTo('contact')} className="text-gray-400 hover:text-white text-sm transition-colors">Contact</button></li>
               </ul>
             </div>
@@ -463,9 +477,9 @@ function AppContent() {
             <div>
               <h4 className="text-lg font-bold mb-6">Legal</h4>
               <ul className="space-y-3">
-                <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Terms & Conditions</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Delete My Data</a></li>
+                <li><button onClick={() => navigateTo('privacy')} className="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</button></li>
+                <li><button className="text-gray-400 hover:text-white text-sm transition-colors text-left">Terms & Conditions</button></li>
+                <li><button className="text-gray-400 hover:text-white text-sm transition-colors text-left">Delete My Data</button></li>
               </ul>
             </div>
 
@@ -501,7 +515,7 @@ function AppContent() {
           </div>
 
           <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[12px] text-gray-500">
-            <p>© 2026 {settings?.companyName || 'j s Media'}. All rights reserved. | Privacy Policy | Terms | Delete Data</p>
+            <p>© 2026 {settings?.companyName || 'j s Media'}. All rights reserved. | <button onClick={() => navigateTo('privacy')} className="hover:text-pink-600 transition-colors">Privacy Policy</button> | Terms | Delete Data</p>
             <button 
               onClick={scrollToTop}
               className="w-10 h-10 rounded-full bg-pink-600 text-white flex items-center justify-center hover:bg-pink-700 transition-colors shadow-lg"

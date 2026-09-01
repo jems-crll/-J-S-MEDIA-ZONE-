@@ -43,10 +43,10 @@ service cloud.firestore {
 
     function isValidTeamMember(data) {
       return data.keys().hasAll(['name', 'role', 'imageUrl', 'order'])
-        && data.keys().size() == 4
+        && data.keys().size() >= 4 && data.keys().size() <= 5
         && data.name is string && data.name.size() <= 100
         && data.role is string && data.role.size() <= 100
-        && data.imageUrl is string && data.imageUrl.size() <= 1000
+        && data.imageUrl is string && data.imageUrl.size() <= 2000000
         && data.order is number;
     }
 

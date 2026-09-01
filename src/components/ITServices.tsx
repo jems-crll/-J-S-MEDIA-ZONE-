@@ -29,6 +29,7 @@ const itServices = [
 ];
 
 interface ITServicesViewProps {
+  key?: string;
   onContactClick: () => void;
 }
 

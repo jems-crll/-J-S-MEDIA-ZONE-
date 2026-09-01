@@ -19,6 +19,7 @@ export interface TeamMember {
   role: string;
   imageUrl: string;
   order: number;
+  isSpecial?: boolean;
 }
 
 interface SiteDataContextType {

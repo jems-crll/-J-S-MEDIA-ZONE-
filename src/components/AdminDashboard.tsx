@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSiteData, SiteSettings, TeamMember } from '../contexts/SiteDataContext';
-import { Save, LogOut, Plus, Trash2, Edit2, X, Check, Users, Settings, User as UserIcon, Phone, Mail, MapPin, MessageSquare, Calendar } from 'lucide-react';
+import { Save, LogOut, Plus, Trash2, Edit2, X, Check, Users, Settings, User as UserIcon, Phone, Mail, MapPin, MessageSquare, Calendar, Menu, ArrowUp } from 'lucide-react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -15,7 +15,11 @@ interface Enquiry {
   status: string;
 }
 
-export default function AdminDashboard() {
+interface AdminDashboardProps {
+  onBack: () => void;
+}
+
+export default function AdminDashboard({ onBack }: AdminDashboardProps) {
   const { user, login, logout, isAdmin, loading: authLoading } = useAuth();
   const { settings, team, loading: dataLoading, updateSettings, upsertTeamMember, deleteTeamMember } = useSiteData();
   
@@ -100,8 +104,10 @@ export default function AdminDashboard() {
         name: editingMember.name,
         role: editingMember.role,
         imageUrl: editingMember.imageUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80',
-        order: editingMember.order || team.length
+        order: editingMember.order ?? team.length,
+        isSpecial: editingMember.isSpecial || false
       }, editingMember.id);
+      alert('Team member saved successfully! (टीम मेंबर जतन झाले!)');
       setEditingMember(null);
     } catch (error) {
       alert('Error saving team member: ' + error);
@@ -128,6 +134,14 @@ export default function AdminDashboard() {
         </div>
 
         <nav className={`${isMenuOpen ? 'flex' : 'hidden'} md:flex flex-1 px-4 py-4 flex-col space-y-2`}>
+          <button 
+            onClick={onBack}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-pink-600 hover:bg-pink-50 transition-all border border-pink-100 mb-4"
+          >
+            <ArrowUp className="w-5 h-5 rotate-[-90deg]" />
+            Back to Website
+          </button>
+
           <button 
             onClick={() => { setActiveTab('settings'); setIsMenuOpen(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'settings' ? 'bg-pink-50 text-pink-600' : 'text-gray-500 hover:bg-gray-50'}`}
@@ -413,45 +427,85 @@ export default function AdminDashboard() {
 
               <form onSubmit={handleSaveMember} className="space-y-6">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Full Name</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Member Full Name (नाव)</label>
                   <input 
                     required
                     type="text" 
                     value={editingMember.name || ''}
                     onChange={e => setEditingMember({...editingMember, name: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-600 focus:ring-2 focus:ring-pink-100 outline-none transition-all"
-                    placeholder="e.g. John Doe"
+                    className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:border-pink-600 focus:ring-4 focus:ring-pink-50 outline-none transition-all text-lg"
+                    placeholder="उदा. Swapnil Jadhav"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Role / Title</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Role / Post (हुद्दा)</label>
                   <input 
                     required
                     type="text" 
                     value={editingMember.role || ''}
                     onChange={e => setEditingMember({...editingMember, role: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-600 focus:ring-2 focus:ring-pink-100 outline-none transition-all"
-                    placeholder="e.g. Creative Director"
+                    className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:border-pink-600 focus:ring-4 focus:ring-pink-50 outline-none transition-all text-lg"
+                    placeholder="उदा. Director & CEO"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Profile Image URL</label>
-                  <input 
-                    type="url" 
-                    value={editingMember.imageUrl || ''}
-                    onChange={e => setEditingMember({...editingMember, imageUrl: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-600 focus:ring-2 focus:ring-pink-100 outline-none transition-all"
-                    placeholder="https://images.unsplash.com/..."
-                  />
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Profile Photo (फोटो निवडा)</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
+                      {editingMember.imageUrl ? (
+                        <img src={editingMember.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Plus className="w-8 h-8 text-gray-300" />
+                      )}
+                    </div>
+                    <label className="flex-1">
+                      <div className="bg-white border-2 border-pink-100 text-pink-600 px-4 py-3 rounded-xl font-bold text-center cursor-pointer hover:bg-pink-50 transition-all">
+                        Select from Gallery
+                      </div>
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 1024 * 1024) {
+                              alert('Image size should be less than 1MB');
+                              return;
+                            }
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setEditingMember({...editingMember, imageUrl: reader.result as string});
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2">Maximum size: 1MB. Recommended: Square photo.</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Display Order</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Display Priority (क्रम)</label>
                   <input 
                     type="number" 
                     value={editingMember.order ?? 0}
                     onChange={e => setEditingMember({...editingMember, order: parseInt(e.target.value)})}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-600 focus:ring-2 focus:ring-pink-100 outline-none transition-all"
+                    className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:border-pink-600 focus:ring-4 focus:ring-pink-50 outline-none transition-all text-lg"
                   />
+                </div>
+
+                <div className="flex items-center gap-3 p-4 bg-pink-50 rounded-2xl border border-pink-100">
+                  <input 
+                    type="checkbox"
+                    id="is-special"
+                    checked={editingMember.isSpecial || false}
+                    onChange={e => setEditingMember({...editingMember, isSpecial: e.target.checked})}
+                    className="w-5 h-5 accent-pink-600"
+                  />
+                  <label htmlFor="is-special" className="text-sm font-bold text-pink-900 cursor-pointer">
+                    Feature Member (स्टार दाखवा)
+                  </label>
                 </div>
 
                 <div className="pt-4 flex gap-4">
