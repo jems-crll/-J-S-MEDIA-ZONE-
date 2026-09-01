@@ -1,0 +1,41 @@
+{
+  "entities": {
+    "SiteSettings": {
+      "title": "Site Settings",
+      "description": "Global configuration for the website including contact details and CEO info.",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string", "description": "The name of the company" },
+        "contactEmail": { "type": "string", "format": "email", "description": "Official contact email" },
+        "contactPhone": { "type": "string", "description": "Official contact phone number" },
+        "officeAddress": { "type": "string", "description": "Physical office address" },
+        "ceoName": { "type": "string", "description": "Name of the CEO" },
+        "ceoRole": { "type": "string", "description": "Role of the CEO" },
+        "ceoInitials": { "type": "string", "description": "Initials for the CEO avatar" }
+      },
+      "required": ["companyName", "contactEmail", "contactPhone", "officeAddress", "ceoName", "ceoRole", "ceoInitials"]
+    },
+    "TeamMember": {
+      "title": "Team Member",
+      "description": "A member of the agency team.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name of the team member" },
+        "role": { "type": "string", "description": "Professional role or title" },
+        "imageUrl": { "type": "string", "format": "uri", "description": "URL to the member's profile image" },
+        "order": { "type": "number", "description": "Display order priority" }
+      },
+      "required": ["name", "role", "imageUrl", "order"]
+    }
+  },
+  "firestore": {
+    "/settings/site": {
+      "schema": "SiteSettings",
+      "description": "Global site configuration document."
+    },
+    "/team/{memberId}": {
+      "schema": "TeamMember",
+      "description": "Individual team member documents."
+    }
+  }
+}

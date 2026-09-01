@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Reusable Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      // Bootstrapped admin check
+      return isVerified() && (
+        request.auth.token.email == "javedsayyad93@gmail.com"
+        // In a real app, we would also check an 'admins' collection
+        // || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 3. Validation Blueprints
+    function isValidSiteSettings(data) {
+      return data.keys().hasAll(['companyName', 'contactEmail', 'contactPhone', 'officeAddress', 'ceoName', 'ceoRole', 'ceoInitials'])
+        && data.keys().size() == 7
+        && data.companyName is string && data.companyName.size() <= 100
+        && data.contactEmail is string && data.contactEmail.size() <= 100
+        && data.contactPhone is string && data.contactPhone.size() <= 50
+        && data.officeAddress is string && data.officeAddress.size() <= 500
+        && data.ceoName is string && data.ceoName.size() <= 100
+        && data.ceoRole is string && data.ceoRole.size() <= 100
+        && data.ceoInitials is string && data.ceoInitials.size() <= 4;
+    }
+
+    function isValidTeamMember(data) {
+      return data.keys().hasAll(['name', 'role', 'imageUrl', 'order'])
+        && data.keys().size() == 4
+        && data.name is string && data.name.size() <= 100
+        && data.role is string && data.role.size() <= 100
+        && data.imageUrl is string && data.imageUrl.size() <= 1000
+        && data.order is number;
+    }
+
+    // 4. Collection Matches
+    match /settings/{settingsId} {
+      allow read: if true; // Public settings
+      allow write: if isAdmin() && isValidId(settingsId) && isValidSiteSettings(request.resource.data);
+    }
+
+    match /team/{memberId} {
+      allow read: if true; // Public team
+      allow create, update: if isAdmin() && isValidId(memberId) && isValidTeamMember(request.resource.data);
+      allow delete: if isAdmin() && isValidId(memberId);
+    }
+
+    match /enquiries/{enquiryId} {
+      allow create: if true; // Public can submit enquiries
+      allow read, delete: if isAdmin();
+    }
+  }
+}
