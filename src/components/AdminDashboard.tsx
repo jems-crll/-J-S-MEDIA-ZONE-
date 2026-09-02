@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSiteData, SiteSettings, TeamMember } from '../contexts/SiteDataContext';
-import { Save, LogOut, Plus, Trash2, Edit2, X, Check, Users, Settings, User as UserIcon, Phone, Mail, MapPin, MessageSquare, Calendar, Menu, ArrowUp } from 'lucide-react';
+import { Save, LogOut, Plus, Trash2, Edit2, X, Check, Users, Settings, User as UserIcon, Phone, Mail, MapPin, MessageSquare, Calendar, Menu, ArrowUp, Star } from 'lucide-react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -104,7 +104,7 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
         name: editingMember.name,
         role: editingMember.role,
         imageUrl: editingMember.imageUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80',
-        order: editingMember.order ?? team.length,
+        order: (isNaN(editingMember.order as any) || editingMember.order === undefined) ? team.length : editingMember.order,
         isSpecial: editingMember.isSpecial || false
       }, editingMember.id);
       alert('Team member saved successfully! (टीम मेंबर जतन झाले!)');
@@ -329,22 +329,36 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
                     className="group relative bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:border-pink-200 transition-all"
                   >
                     <div className="flex items-center gap-4">
-                      <img src={member.imageUrl} alt={member.name} className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-sm" />
-                      <div>
-                        <h4 className="font-bold text-gray-900">{member.name}</h4>
-                        <p className="text-sm text-gray-500">{member.role}</p>
+                      <div className="relative">
+                        <img src={member.imageUrl} alt={member.name} className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-sm" />
+                        {member.isSpecial && (
+                          <div className="absolute -top-2 -right-2 bg-pink-600 text-white p-1 rounded-full border-2 border-white shadow-sm">
+                            <Star className="w-3 h-3 fill-current" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 truncate">{member.name}</h4>
+                        <p className="text-sm text-gray-500 truncate">{member.role}</p>
+                        <p className="text-[10px] text-gray-400 font-medium">Priority: {member.order}</p>
                       </div>
                     </div>
-                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                    <div className="absolute top-4 right-4 flex gap-2">
                       <button 
                         onClick={() => setEditingMember(member)}
-                        className="p-2 bg-white text-blue-600 rounded-lg shadow-sm hover:bg-blue-50 transition-all"
+                        className="p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-all border border-blue-700"
+                        title="Edit Member"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button 
-                        onClick={() => deleteTeamMember(member.id)}
-                        className="p-2 bg-white text-red-600 rounded-lg shadow-sm hover:bg-red-50 transition-all"
+                        onClick={() => {
+                          if (confirm('Delete ' + member.name + '? (टीम मेंबर काढून टाकायचे का?)')) {
+                            deleteTeamMember(member.id);
+                          }
+                        }}
+                        className="p-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition-all border border-red-700"
+                        title="Delete Member"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -489,8 +503,11 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
                   <label className="block text-sm font-bold text-gray-700 mb-2">Display Priority (क्रम)</label>
                   <input 
                     type="number" 
-                    value={editingMember.order ?? 0}
-                    onChange={e => setEditingMember({...editingMember, order: parseInt(e.target.value)})}
+                    value={isNaN(editingMember.order as any) ? '' : (editingMember.order ?? 0)}
+                    onChange={e => {
+                      const val = parseInt(e.target.value);
+                      setEditingMember({...editingMember, order: isNaN(val) ? 0 : val});
+                    }}
                     className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:border-pink-600 focus:ring-4 focus:ring-pink-50 outline-none transition-all text-lg"
                   />
                 </div>
