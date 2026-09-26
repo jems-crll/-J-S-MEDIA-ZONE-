@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, Facebook, Instagram, Twitter, Youtube, Linkedin, Mail, Phone, MapPin, ArrowUp, ShieldCheck } from 'lucide-react';
+import { Menu, X, Facebook, Instagram, Twitter, Youtube, Linkedin, Mail, Phone, MapPin, ArrowUp, ShieldCheck, ExternalLink, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { navItems, services, whatWeOffer, whyChooseUs } from './data';
 import Typewriter from './components/Typewriter';
@@ -22,6 +22,28 @@ function AppContent() {
   const { settings, team, loading } = useSiteData();
 
   useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.replace(/^\/|\/$/g, '');
+      if (!path) {
+        setView('home');
+      } else {
+        const knownViews = ['email-marketing', 'it-services', 'contact', 'privacy', 'careers'];
+        if (knownViews.includes(path)) {
+          setView(path as any);
+        } else {
+          setView('home');
+        }
+      }
+    };
+
+    // Initial check
+    handlePopState();
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -33,6 +55,8 @@ function AppContent() {
     setView(newView);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setIsMenuOpen(false);
+    const url = newView === 'home' ? '/' : `/${newView}`;
+    window.history.pushState({}, '', url);
   };
 
   if (view === 'admin') {
@@ -42,71 +66,73 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-pink-100 selection:text-pink-600">
       {/* Header */}
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? 'bg-white shadow-md py-3' : 'bg-white/90 backdrop-blur-sm py-4'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
-          <button 
-            onClick={() => navigateTo('home')}
-            className="flex flex-col text-left group"
-          >
-            <span className="text-2xl font-black tracking-tighter text-gray-900 group-hover:text-pink-600 transition-colors">
-              j s <span className="text-pink-600 group-hover:text-gray-900">Media</span>
-            </span>
-            <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 -mt-1">
-              Unlock Your Business
-            </span>
-          </button>
-
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center space-x-8">
+      {view !== 'campaign-view' && (
+        <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          isScrolled ? 'bg-white shadow-md py-3' : 'bg-white/90 backdrop-blur-sm py-4'
+        }`}>
+          <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
             <button 
               onClick={() => navigateTo('home')}
-              className={`text-sm font-semibold transition-colors ${view === 'home' ? 'text-pink-600' : 'text-gray-700 hover:text-pink-600'}`}
+              className="flex flex-col text-left group"
             >
-              Home
+              <span className="text-2xl font-black tracking-tighter text-gray-900 group-hover:text-pink-600 transition-colors">
+                j s <span className="text-pink-600 group-hover:text-gray-900">Media</span>
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 -mt-1">
+                Unlock Your Business
+              </span>
             </button>
-            <a href="#about" onClick={(e) => { e.preventDefault(); navigateTo('home'); setTimeout(() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="text-sm font-semibold text-gray-700 hover:text-pink-600 transition-colors">About Us</a>
-            <div className="relative group">
-              <button className={`text-sm font-semibold transition-colors ${view !== 'home' ? 'text-pink-600' : 'text-gray-700 hover:text-pink-600'}`}>
-                Services
+
+            {/* Desktop Nav */}
+            <nav className="hidden md:flex items-center space-x-8">
+              <button 
+                onClick={() => navigateTo('home')}
+                className={`text-sm font-semibold transition-colors ${view === 'home' ? 'text-pink-600' : 'text-gray-700 hover:text-pink-600'}`}
+              >
+                Home
               </button>
-              <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-xl rounded-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all py-2">
-                <button onClick={() => navigateTo('email-marketing')} className="w-full text-left px-4 py-2 text-sm hover:bg-pink-50 hover:text-pink-600">Email Marketing</button>
-                <button onClick={() => navigateTo('it-services')} className="w-full text-left px-4 py-2 text-sm hover:bg-pink-50 hover:text-pink-600">IT Services</button>
+              <a href="#about" onClick={(e) => { e.preventDefault(); navigateTo('home'); setTimeout(() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="text-sm font-semibold text-gray-700 hover:text-pink-600 transition-colors">About Us</a>
+              <div className="relative group">
+                <button className={`text-sm font-semibold transition-colors ${view !== 'home' ? 'text-pink-600' : 'text-gray-700 hover:text-pink-600'}`}>
+                  Services
+                </button>
+                <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-xl rounded-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all py-2">
+                  <button onClick={() => navigateTo('email-marketing')} className="w-full text-left px-4 py-2 text-sm hover:bg-pink-50 hover:text-pink-600">Email Marketing</button>
+                  <button onClick={() => navigateTo('it-services')} className="w-full text-left px-4 py-2 text-sm hover:bg-pink-50 hover:text-pink-600">IT Services</button>
+                </div>
               </div>
-            </div>
-            <button className="text-sm font-semibold text-gray-700 hover:text-pink-600 transition-colors">Careers</button>
-            <button onClick={() => navigateTo('contact')} className="text-sm font-semibold text-gray-700 hover:text-pink-600 transition-colors">Contact</button>
-          </nav>
+              <button onClick={() => navigateTo('careers')} className="text-sm font-semibold text-gray-700 hover:text-pink-600 transition-colors">Careers</button>
+              <button onClick={() => navigateTo('contact')} className="text-sm font-semibold text-gray-700 hover:text-pink-600 transition-colors">Contact</button>
+            </nav>
 
-          <button 
-            className="md:hidden text-gray-900"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
-          </button>
-        </div>
-
-        {/* Mobile Nav */}
-        <AnimatePresence>
-          {isMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="md:hidden bg-white border-t border-gray-100 absolute w-full left-0 p-4 shadow-xl"
+            <button 
+              className="md:hidden text-gray-900"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
-              <div className="flex flex-col space-y-4">
-                <button onClick={() => navigateTo('home')} className="text-lg font-semibold text-left">Home</button>
-                <button onClick={() => navigateTo('email-marketing')} className="text-lg font-semibold text-left">Email Marketing</button>
-                <button onClick={() => navigateTo('it-services')} className="text-lg font-semibold text-left">IT Services</button>
-                <button onClick={() => navigateTo('contact')} className="text-lg font-semibold text-left">Contact</button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </header>
+              {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+            </button>
+          </div>
+
+          {/* Mobile Nav */}
+          <AnimatePresence>
+            {isMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="md:hidden bg-white border-t border-gray-100 absolute w-full left-0 p-4 shadow-xl"
+              >
+                <div className="flex flex-col space-y-4">
+                  <button onClick={() => navigateTo('home')} className="text-lg font-semibold text-left">Home</button>
+                  <button onClick={() => navigateTo('email-marketing')} className="text-lg font-semibold text-left">Email Marketing</button>
+                  <button onClick={() => navigateTo('it-services')} className="text-lg font-semibold text-left">IT Services</button>
+                  <button onClick={() => navigateTo('contact')} className="text-lg font-semibold text-left">Contact</button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </header>
+      )}
 
       <AnimatePresence mode="wait">
         {view === 'home' && (
@@ -426,105 +452,107 @@ function AppContent() {
       </AnimatePresence>
 
       {/* Footer */}
-      <footer id="contact" className="bg-[#111111] text-white pt-20 pb-10">
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-            {/* Branding */}
-            <div>
-              <div className="flex flex-col mb-6">
-                <span className="text-2xl font-black tracking-tighter">
-                  j s <span className="text-pink-600">Media</span>
-                </span>
-                <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 -mt-1">
-                  Unlock Your Business
-                </span>
+      {view !== 'campaign-view' && (
+        <footer id="contact" className="bg-[#111111] text-white pt-20 pb-10">
+          <div className="max-w-7xl mx-auto px-4 md:px-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+              {/* Branding */}
+              <div>
+                <div className="flex flex-col mb-6">
+                  <span className="text-2xl font-black tracking-tighter">
+                    j s <span className="text-pink-600">Media</span>
+                  </span>
+                  <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 -mt-1">
+                    Unlock Your Business
+                  </span>
+                </div>
+                <p className="text-gray-400 text-sm leading-relaxed mb-6">
+                  Empowering your brand with digital marketing, IT solutions, and creative media services.
+                </p>
+                <div className="flex space-x-4">
+                  <a href="#" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-pink-600 transition-colors">
+                    <Linkedin size={16} />
+                  </a>
+                  <a href="#" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-pink-600 transition-colors">
+                    <Facebook size={16} />
+                  </a>
+                  <a href="#" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-pink-600 transition-colors">
+                    <Instagram size={16} />
+                  </a>
+                  <a href="#" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-pink-600 transition-colors">
+                    <Twitter size={16} />
+                  </a>
+                  <a href="#" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-pink-600 transition-colors">
+                    <Youtube size={16} />
+                  </a>
+                </div>
               </div>
-              <p className="text-gray-400 text-sm leading-relaxed mb-6">
-                Empowering your brand with digital marketing, IT solutions, and creative media services.
-              </p>
-              <div className="flex space-x-4">
-                <a href="#" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-pink-600 transition-colors">
-                  <Linkedin size={16} />
-                </a>
-                <a href="#" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-pink-600 transition-colors">
-                  <Facebook size={16} />
-                </a>
-                <a href="#" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-pink-600 transition-colors">
-                  <Instagram size={16} />
-                </a>
-                <a href="#" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-pink-600 transition-colors">
-                  <Twitter size={16} />
-                </a>
-                <a href="#" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-pink-600 transition-colors">
-                  <Youtube size={16} />
-                </a>
+
+              {/* Navigation */}
+              <div>
+                <h4 className="text-lg font-bold mb-6">Navigation</h4>
+                <ul className="space-y-3 text-left">
+                  <li><button onClick={() => navigateTo('home')} className="text-gray-400 hover:text-white text-sm transition-colors">Home</button></li>
+                  <li><button onClick={() => { navigateTo('home'); setTimeout(() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="text-gray-400 hover:text-white text-sm transition-colors">About Us</button></li>
+                  <li><button onClick={() => navigateTo('it-services')} className="text-gray-400 hover:text-white text-sm transition-colors">Services</button></li>
+                  <li><button onClick={() => navigateTo('careers')} className="text-gray-400 hover:text-white text-sm transition-colors">Careers</button></li>
+                  <li><button onClick={() => navigateTo('contact')} className="text-gray-400 hover:text-white text-sm transition-colors">Contact</button></li>
+                </ul>
+              </div>
+
+              {/* Legal */}
+              <div>
+                <h4 className="text-lg font-bold mb-6">Legal</h4>
+                <ul className="space-y-3">
+                  <li><button onClick={() => navigateTo('privacy')} className="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</button></li>
+                  <li><button className="text-gray-400 hover:text-white text-sm transition-colors text-left">Terms & Conditions</button></li>
+                  <li><button className="text-gray-400 hover:text-white text-sm transition-colors text-left">Delete My Data</button></li>
+                </ul>
+              </div>
+
+              {/* Contact */}
+              <div>
+                <h4 className="text-lg font-bold mb-6">Contact</h4>
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3 text-sm text-gray-400">
+                    <MapPin size={18} className="text-pink-600 shrink-0" />
+                    <span>{settings?.officeAddress || 'Pune, Maharashtra, India'}</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-sm text-gray-400">
+                    <Phone size={18} className="text-pink-600 shrink-0" />
+                    <span>{settings?.contactPhone || '+91-9921636637'}</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-sm text-gray-400">
+                    <Mail size={18} className="text-pink-600 shrink-0" />
+                    <span>{settings?.contactEmail || 'info@jsmedia.com'}</span>
+                  </li>
+                </ul>
+                
+                <div className="mt-8">
+                  <p className="text-sm font-bold mb-3">Admin Portal:</p>
+                  <button 
+                    onClick={() => navigateTo('admin')}
+                    className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-pink-600 transition-colors uppercase tracking-widest"
+                  >
+                    <ShieldCheck size={14} />
+                    Office Login
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Navigation */}
-            <div>
-              <h4 className="text-lg font-bold mb-6">Navigation</h4>
-              <ul className="space-y-3 text-left">
-                <li><button onClick={() => navigateTo('home')} className="text-gray-400 hover:text-white text-sm transition-colors">Home</button></li>
-                <li><button onClick={() => { navigateTo('home'); setTimeout(() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="text-gray-400 hover:text-white text-sm transition-colors">About Us</button></li>
-                <li><button onClick={() => navigateTo('it-services')} className="text-gray-400 hover:text-white text-sm transition-colors">Services</button></li>
-                <li><button onClick={() => navigateTo('careers')} className="text-gray-400 hover:text-white text-sm transition-colors">Careers</button></li>
-                <li><button onClick={() => navigateTo('contact')} className="text-gray-400 hover:text-white text-sm transition-colors">Contact</button></li>
-              </ul>
-            </div>
-
-            {/* Legal */}
-            <div>
-              <h4 className="text-lg font-bold mb-6">Legal</h4>
-              <ul className="space-y-3">
-                <li><button onClick={() => navigateTo('privacy')} className="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</button></li>
-                <li><button className="text-gray-400 hover:text-white text-sm transition-colors text-left">Terms & Conditions</button></li>
-                <li><button className="text-gray-400 hover:text-white text-sm transition-colors text-left">Delete My Data</button></li>
-              </ul>
-            </div>
-
-            {/* Contact */}
-            <div>
-              <h4 className="text-lg font-bold mb-6">Contact</h4>
-              <ul className="space-y-4">
-                <li className="flex items-start gap-3 text-sm text-gray-400">
-                  <MapPin size={18} className="text-pink-600 shrink-0" />
-                  <span>{settings?.officeAddress || 'Pune, Maharashtra, India'}</span>
-                </li>
-                <li className="flex items-center gap-3 text-sm text-gray-400">
-                  <Phone size={18} className="text-pink-600 shrink-0" />
-                  <span>{settings?.contactPhone || '+91-9921636637'}</span>
-                </li>
-                <li className="flex items-center gap-3 text-sm text-gray-400">
-                  <Mail size={18} className="text-pink-600 shrink-0" />
-                  <span>{settings?.contactEmail || 'info@jsmedia.com'}</span>
-                </li>
-              </ul>
-              
-              <div className="mt-8">
-                <p className="text-sm font-bold mb-3">Admin Portal:</p>
-                <button 
-                  onClick={() => navigateTo('admin')}
-                  className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-pink-600 transition-colors uppercase tracking-widest"
-                >
-                  <ShieldCheck size={14} />
-                  Office Login
-                </button>
-              </div>
+            <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[12px] text-gray-500">
+              <p>© 2026 {settings?.companyName || 'j s Media'}. All rights reserved. | <button onClick={() => navigateTo('privacy')} className="hover:text-pink-600 transition-colors">Privacy Policy</button> | Terms | Delete Data</p>
+              <button 
+                onClick={scrollToTop}
+                className="w-10 h-10 rounded-full bg-pink-600 text-white flex items-center justify-center hover:bg-pink-700 transition-colors shadow-lg"
+              >
+                <ArrowUp size={20} />
+              </button>
             </div>
           </div>
-
-          <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[12px] text-gray-500">
-            <p>© 2026 {settings?.companyName || 'j s Media'}. All rights reserved. | <button onClick={() => navigateTo('privacy')} className="hover:text-pink-600 transition-colors">Privacy Policy</button> | Terms | Delete Data</p>
-            <button 
-              onClick={scrollToTop}
-              className="w-10 h-10 rounded-full bg-pink-600 text-white flex items-center justify-center hover:bg-pink-700 transition-colors shadow-lg"
-            >
-              <ArrowUp size={20} />
-            </button>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

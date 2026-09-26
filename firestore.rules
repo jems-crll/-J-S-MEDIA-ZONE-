@@ -50,6 +50,22 @@ service cloud.firestore {
         && data.order is number;
     }
 
+    function isValidCampaign(data) {
+      return data.keys().hasAll(['title', 'headline', 'description', 'bulletPoints', 'imageUrl', 'galleryImages', 'affiliateLink', 'buttonText', 'createdAt', 'isActive', 'slug'])
+        && data.keys().size() == 11
+        && data.title is string && data.title.size() <= 200
+        && data.headline is string && data.headline.size() <= 500
+        && data.description is string && data.description.size() <= 10000
+        && data.bulletPoints is list
+        && data.imageUrl is string && data.imageUrl.size() <= 2000000
+        && data.galleryImages is list
+        && data.affiliateLink is string && data.affiliateLink.size() <= 2000
+        && data.buttonText is string && data.buttonText.size() <= 100
+        && data.createdAt is number
+        && data.isActive is bool
+        && data.slug is string && data.slug.size() <= 100;
+    }
+
     // 4. Collection Matches
     match /settings/{settingsId} {
       allow read: if true; // Public settings
@@ -60,6 +76,12 @@ service cloud.firestore {
       allow read: if true; // Public team
       allow create, update: if isAdmin() && isValidId(memberId) && isValidTeamMember(request.resource.data);
       allow delete: if isAdmin() && isValidId(memberId);
+    }
+
+    match /campaigns/{campaignId} {
+      allow read: if true; // Public campaigns
+      allow create, update: if isAdmin() && isValidId(campaignId) && isValidCampaign(request.resource.data);
+      allow delete: if isAdmin() && isValidId(campaignId);
     }
 
     match /enquiries/{enquiryId} {

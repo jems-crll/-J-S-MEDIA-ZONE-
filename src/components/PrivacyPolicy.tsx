@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Check } from 'lucide-react';
-import { SiteSettings } from '../contexts/SiteDataContext';
+import { SiteSettings } from '../types';
 
 interface PrivacyPolicyProps {
   settings: SiteSettings | null;

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
-import { useSiteData, SiteSettings, TeamMember } from '../contexts/SiteDataContext';
-import { Save, LogOut, Plus, Trash2, Edit2, X, Check, Users, Settings, User as UserIcon, Phone, Mail, MapPin, MessageSquare, Calendar, Menu, ArrowUp, Star } from 'lucide-react';
+import { useSiteData } from '../contexts/SiteDataContext';
+import { SiteSettings, TeamMember, Campaign } from '../types';
+import { Save, LogOut, Plus, Trash2, Edit2, X, Check, Users, Settings, User as UserIcon, Phone, Mail, MapPin, MessageSquare, Calendar, Menu, ArrowUp, Star, Briefcase, ExternalLink, Sparkles, Copy, Eye } from 'lucide-react';
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -21,13 +22,26 @@ interface AdminDashboardProps {
 
 export default function AdminDashboard({ onBack }: AdminDashboardProps) {
   const { user, login, logout, isAdmin, loading: authLoading } = useAuth();
-  const { settings, team, loading: dataLoading, updateSettings, upsertTeamMember, deleteTeamMember } = useSiteData();
+  const { 
+    settings, 
+    team, 
+    campaigns,
+    loading: dataLoading, 
+    updateSettings, 
+    upsertTeamMember, 
+    deleteTeamMember,
+    upsertCampaign,
+    deleteCampaign
+  } = useSiteData();
   
-  const [activeTab, setActiveTab] = useState<'settings' | 'team' | 'enquiries'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'team' | 'campaigns' | 'enquiries'>('settings');
   const [editingMember, setEditingMember] = useState<Partial<TeamMember> | null>(null);
+  const [editingCampaign, setEditingCampaign] = useState<Partial<Campaign> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showEmailPreview, setShowEmailPreview] = useState<Campaign | null>(null);
 
   const [formData, setFormData] = useState<SiteSettings | null>(null);
 
@@ -116,6 +130,70 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
     }
   };
 
+  const handleSaveCampaign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCampaign?.title || !editingCampaign?.affiliateLink) return;
+    
+    setIsSaving(true);
+    try {
+      const slug = editingCampaign.slug || editingCampaign.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      await upsertCampaign({
+        title: editingCampaign.title,
+        description: editingCampaign.description || '',
+        imageUrl: editingCampaign.imageUrl || '',
+        affiliateLink: editingCampaign.affiliateLink,
+        headline: editingCampaign.headline || '',
+        bulletPoints: editingCampaign.bulletPoints || [],
+        galleryImages: editingCampaign.galleryImages || [],
+        buttonText: editingCampaign.buttonText || 'Buy Now',
+        createdAt: editingCampaign.createdAt || Date.now(),
+        isActive: editingCampaign.isActive !== false,
+        slug: slug,
+        emailHtml: editingCampaign.emailHtml || ''
+      }, editingCampaign.id);
+      alert('Marketing campaign saved successfully! (मोहीम जतन झाली!)');
+      setEditingCampaign(null);
+    } catch (error) {
+      alert('Error saving campaign: ' + error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const generateEmailWithAI = async () => {
+    if (!editingCampaign?.title || !editingCampaign?.affiliateLink) {
+      alert('Please fill Name, Description and Affiliate Link first! (नाव, माहिती आणि लिंक आधी भरा!)');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/gemini/generate-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          title: editingCampaign.title,
+          description: editingCampaign.description,
+          imageUrl: editingCampaign.imageUrl,
+          affiliateLink: editingCampaign.affiliateLink
+        })
+      });
+
+      if (!response.ok) throw new Error('AI generation failed');
+      
+      const data = await response.json();
+      setEditingCampaign({
+        ...editingCampaign,
+        emailHtml: data.html
+      });
+      alert('Email Design Generated! (ईमेल डिझाईन तयार झाले!)');
+    } catch (error) {
+      alert('AI generation error: ' + error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
       {/* Sidebar */}
@@ -157,6 +235,13 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
             Team Members
           </button>
           <button 
+            onClick={() => { setActiveTab('campaigns'); setIsMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'campaigns' ? 'bg-pink-50 text-pink-600' : 'text-gray-500 hover:bg-gray-50'}`}
+          >
+            <Briefcase className="w-5 h-5" />
+            Marketing
+          </button>
+          <button 
             onClick={() => { setActiveTab('enquiries'); setIsMenuOpen(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'enquiries' ? 'bg-pink-50 text-pink-600' : 'text-gray-500 hover:bg-gray-50'}`}
           >
@@ -193,7 +278,10 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
           <div>
             <h2 className="text-3xl font-bold text-gray-900">
-              {activeTab === 'settings' ? 'Global Site Settings' : activeTab === 'team' ? 'Manage Our Team' : 'User Enquiries'}
+              {activeTab === 'settings' ? 'Global Site Settings' : 
+               activeTab === 'team' ? 'Manage Our Team' : 
+               activeTab === 'campaigns' ? 'Marketing Campaigns' :
+               'User Enquiries'}
             </h2>
             <p className="text-gray-500 mt-1">Updates will reflect live on the website instantly.</p>
           </div>
@@ -216,6 +304,16 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
             >
               <Plus className="w-5 h-5" />
               Add Member
+            </button>
+          )}
+
+          {activeTab === 'campaigns' && (
+            <button 
+              onClick={() => setEditingCampaign({})}
+              className="flex items-center justify-center gap-2 bg-pink-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-pink-700 transition-all shadow-lg shadow-pink-100"
+            >
+              <Plus className="w-5 h-5" />
+              New Campaign
             </button>
           )}
         </header>
@@ -359,6 +457,67 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
                         }}
                         className="p-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition-all border border-red-700"
                         title="Delete Member"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {activeTab === 'campaigns' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <AnimatePresence>
+                {campaigns.map((campaign) => (
+                  <motion.div 
+                    key={campaign.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="group relative bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:border-pink-200 transition-all"
+                  >
+                    <div className="space-y-4">
+                      {campaign.imageUrl && (
+                        <div className="aspect-video rounded-xl overflow-hidden bg-gray-200">
+                          <img src={campaign.imageUrl} alt={campaign.title} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <div>
+                        <h4 className="font-bold text-gray-900 truncate">{campaign.title}</h4>
+                        <p className="text-xs text-gray-500 line-clamp-2 mt-1">{campaign.description}</p>
+                        <div className="flex items-center gap-2 mt-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${campaign.isActive !== false ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-500'}`}>
+                            {campaign.isActive !== false ? 'ACTIVE' : 'INACTIVE'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      <button 
+                        onClick={() => setShowEmailPreview(campaign)}
+                        className="p-2 bg-white text-pink-600 rounded-lg shadow-lg hover:bg-pink-50 transition-all border border-pink-100"
+                        title="View Email Template"
+                      >
+                        <Mail className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => setEditingCampaign(campaign)}
+                        className="p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-all border border-blue-700"
+                        title="Edit Campaign"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (confirm('Delete ' + campaign.title + '?')) {
+                            deleteCampaign(campaign.id);
+                          }
+                        }}
+                        className="p-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition-all border border-red-700"
+                        title="Delete Campaign"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -543,6 +702,217 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Campaign Modal */}
+      <AnimatePresence>
+        {editingCampaign && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingCampaign(null)}
+              className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-8 flex flex-col max-h-[90vh]"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-pink-50 rounded-2xl flex items-center justify-center text-pink-600">
+                    <Briefcase className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    {editingCampaign.id ? 'Edit Marketing Campaign' : 'New Marketing Campaign'}
+                  </h3>
+                </div>
+                <button onClick={() => setEditingCampaign(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                  <X className="w-6 h-6 text-gray-400" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveCampaign} className="flex-1 overflow-hidden flex flex-col">
+                <div className="flex-1 overflow-y-auto px-1 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Product Name (प्रोडक्टचे नाव)</label>
+                      <input 
+                        required
+                        type="text" 
+                        value={editingCampaign.title || ''}
+                        onChange={e => setEditingCampaign({...editingCampaign, title: e.target.value})}
+                        className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:border-pink-600 focus:ring-4 focus:ring-pink-50 outline-none transition-all"
+                        placeholder="e.g. Smart Fitness Watch"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Affiliate Link (तुमची लिंक)</label>
+                      <input 
+                        required
+                        type="url" 
+                        value={editingCampaign.affiliateLink || ''}
+                        onChange={e => setEditingCampaign({...editingCampaign, affiliateLink: e.target.value})}
+                        className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:border-pink-600 focus:ring-4 focus:ring-pink-50 outline-none transition-all"
+                        placeholder="https://amzn.to/..."
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Product Details/Features (माहिती)</label>
+                    <textarea 
+                      rows={3}
+                      value={editingCampaign.description || ''}
+                      onChange={e => setEditingCampaign({...editingCampaign, description: e.target.value})}
+                      className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:border-pink-600 focus:ring-4 focus:ring-pink-50 outline-none transition-all"
+                      placeholder="List key features here..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Product Image URL (फोटो लिंक)</label>
+                    <input 
+                      type="url" 
+                      value={editingCampaign.imageUrl || ''}
+                      onChange={e => setEditingCampaign({...editingCampaign, imageUrl: e.target.value})}
+                      className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:border-pink-600 focus:ring-4 focus:ring-pink-50 outline-none transition-all"
+                      placeholder="https://images.unsplash.com/..."
+                    />
+                  </div>
+
+                  <div className="bg-pink-50 p-6 rounded-3xl border border-pink-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-pink-600" />
+                        <h4 className="font-bold text-pink-900">Email Marketing Designer (AI)</h4>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={generateEmailWithAI}
+                        disabled={isGenerating}
+                        className="bg-white text-pink-600 px-6 py-2 rounded-xl font-bold hover:bg-pink-100 transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {isGenerating ? <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-4 h-4 border-2 border-pink-600 border-t-transparent rounded-full" /> : <Sparkles className="w-4 h-4" />}
+                        Generate HTML Template
+                      </button>
+                    </div>
+                    
+                    {editingCampaign.emailHtml ? (
+                      <div className="space-y-4">
+                        <div className="bg-gray-900 rounded-2xl p-4 font-mono text-xs text-pink-300 overflow-x-auto max-h-40 shadow-inner">
+                          <pre>{editingCampaign.emailHtml}</pre>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(editingCampaign.emailHtml || '');
+                            alert('Code Copied!');
+                          }}
+                          className="w-full flex items-center justify-center gap-2 py-3 bg-white text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-all border border-gray-200"
+                        >
+                          <Copy className="w-4 h-4" /> Copy HTML Code
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-pink-800 opacity-60 text-center py-4">Click generate to create your custom HTML email template.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-8 flex gap-4">
+                  <button 
+                    type="button"
+                    onClick={() => setEditingCampaign(null)}
+                    className="flex-1 px-6 py-4 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-all border border-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={isSaving}
+                    className="flex-1 bg-pink-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-pink-700 transition-all shadow-xl shadow-pink-100 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSaving && <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />}
+                    {editingCampaign.id ? 'Save Changes' : 'Create Campaign'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Email Preview Modal */}
+      <AnimatePresence>
+        {showEmailPreview && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEmailPreview(null)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative bg-white rounded-[2rem] shadow-2xl max-w-2xl w-full p-8 flex flex-col h-[90vh]"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                    <Mail className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">Email Template Preview</h3>
+                    <p className="text-sm text-gray-500">Live preview of your generated marketing email.</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowEmailPreview(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                  <X className="w-6 h-6 text-gray-400" />
+                </button>
+              </div>
+
+              <div className="flex-1 bg-gray-50 rounded-3xl border-2 border-gray-100 overflow-hidden shadow-inner p-4">
+                {showEmailPreview.emailHtml ? (
+                  <iframe 
+                    srcDoc={showEmailPreview.emailHtml}
+                    className="w-full h-full border-none bg-white rounded-xl"
+                    title="Email Preview"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-400 font-medium">
+                    No template generated for this campaign yet.
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-8 flex gap-4">
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(showEmailPreview.emailHtml || '');
+                    alert('HTML Code Copied!');
+                  }}
+                  disabled={!showEmailPreview.emailHtml}
+                  className="flex-[2] py-4 bg-pink-600 text-white rounded-2xl font-bold hover:bg-pink-700 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Copy className="w-5 h-5" /> Copy HTML Code
+                </button>
+                <button 
+                  onClick={() => setShowEmailPreview(null)}
+                  className="flex-1 py-4 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-all border border-gray-200"
+                >
+                  Close
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

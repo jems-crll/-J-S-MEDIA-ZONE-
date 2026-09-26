@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { TeamMember } from '../contexts/SiteDataContext';
+import { TeamMember } from '../types';
 import { Star } from 'lucide-react';
 
 interface TeamCardProps {

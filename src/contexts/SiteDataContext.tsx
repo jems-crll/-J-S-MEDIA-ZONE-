@@ -3,32 +3,18 @@ import { doc, onSnapshot, setDoc, collection, query, orderBy, deleteDoc } from '
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 
-export interface SiteSettings {
-  companyName: string;
-  contactEmail: string;
-  contactPhone: string;
-  officeAddress: string;
-  ceoName: string;
-  ceoRole: string;
-  ceoInitials: string;
-}
-
-export interface TeamMember {
-  id: string;
-  name: string;
-  role: string;
-  imageUrl: string;
-  order: number;
-  isSpecial?: boolean;
-}
+import { SiteSettings, TeamMember, Campaign } from '../types';
 
 interface SiteDataContextType {
   settings: SiteSettings | null;
   team: TeamMember[];
+  campaigns: Campaign[];
   loading: boolean;
   updateSettings: (settings: SiteSettings) => Promise<void>;
   upsertTeamMember: (member: Omit<TeamMember, 'id'>, id?: string) => Promise<void>;
   deleteTeamMember: (id: string) => Promise<void>;
+  upsertCampaign: (campaign: Omit<Campaign, 'id'>, id?: string) => Promise<void>;
+  deleteCampaign: (id: string) => Promise<void>;
 }
 
 const SiteDataContext = createContext<SiteDataContextType | undefined>(undefined);
@@ -46,6 +32,7 @@ const defaultSettings: SiteSettings = {
 export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const { isAdmin } = useAuth();
 
@@ -70,9 +57,20 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
       setTeam(teamData);
     });
 
+    // Listen to campaigns
+    const campaignsQuery = query(collection(db, 'campaigns'), orderBy('createdAt', 'desc'));
+    const campaignsUnsubscribe = onSnapshot(campaignsQuery, (snapshot) => {
+      const campaignsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Campaign[];
+      setCampaigns(campaignsData);
+    });
+
     return () => {
       settingsUnsubscribe();
       teamUnsubscribe();
+      campaignsUnsubscribe();
     };
   }, []);
 
@@ -92,8 +90,29 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     await deleteDoc(doc(db, 'team', id));
   };
 
+  const upsertCampaign = async (campaign: Omit<Campaign, 'id'>, id?: string) => {
+    if (!isAdmin) throw new Error('Unauthorized');
+    const campaignDoc = id ? doc(db, 'campaigns', id) : doc(collection(db, 'campaigns'));
+    await setDoc(campaignDoc, campaign);
+  };
+
+  const deleteCampaign = async (id: string) => {
+    if (!isAdmin) throw new Error('Unauthorized');
+    await deleteDoc(doc(db, 'campaigns', id));
+  };
+
   return (
-    <SiteDataContext.Provider value={{ settings, team, loading, updateSettings, upsertTeamMember, deleteTeamMember }}>
+    <SiteDataContext.Provider value={{ 
+      settings, 
+      team, 
+      campaigns,
+      loading, 
+      updateSettings, 
+      upsertTeamMember, 
+      deleteTeamMember,
+      upsertCampaign,
+      deleteCampaign
+    }}>
       {children}
     </SiteDataContext.Provider>
   );

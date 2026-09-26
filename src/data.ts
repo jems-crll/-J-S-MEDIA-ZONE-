@@ -42,12 +42,14 @@ export const teamMembers: TeamMember[] = [
     name: 'Hina Mulla',
     role: 'Director & CEO',
     imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=400&h=400',
+    order: 1,
   },
   {
     id: 'sid-mulla',
     name: 'Sid Mulla',
     role: 'C.T.O',
     imageUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=400&h=400',
+    order: 2,
     isSpecial: true,
   },
   {
@@ -55,24 +57,28 @@ export const teamMembers: TeamMember[] = [
     name: 'Pranav',
     role: 'Graphic UI Designer',
     imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400&h=400',
+    order: 3,
   },
   {
     id: 'javed-sayyad',
     name: 'Javed Sayyad',
     role: 'Software Engineer',
     imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400&h=400',
+    order: 4,
   },
   {
     id: 'nikhil-date',
     name: 'Nikhil Date',
     role: 'Software Engineer',
     imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=400&h=400',
+    order: 5,
   },
   {
     id: 'samiksha-kalode',
     name: 'Samiksha Kalode',
     role: 'Software Engineer',
     imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=400&h=400',
+    order: 6,
   },
 ];
 
